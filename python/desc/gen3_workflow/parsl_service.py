@@ -157,6 +157,17 @@ def get_run_command(job):
         wq_bash_app = parsl.bash_app(executors=['work_queue'], cache=True,
                                      ignore_for_cache=['stdout', 'stderr'])
         return wq_bash_app(wq_run_command)
+    if 'taskvine' in job.parent_graph.dfk.executors:
+        # For the workQueue, use a bash_app that passes the resource
+        # specifications to parsl.
+        def wq_run_command(command_line, inputs=(), stdout=None, stderr=None,
+                           parsl_resource_specification=resource_spec):
+            return command_line
+
+        wq_run_command.__name__ = task_label
+        wq_bash_app = parsl.bash_app(executors=['taskvine'], cache=True,
+                                     ignore_for_cache=['stdout', 'stderr'])
+        return wq_bash_app(wq_run_command)
 
     # Handle parsl configs with executors for different job_size values.
     memory_request = resource_spec['memory']/1024.   # convert to GB

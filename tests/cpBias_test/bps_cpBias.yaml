@@ -15,4 +15,4 @@ parsl_config:
   monitoring: true
   executor: TaskVine
   provider: Local
-  log_level: logging.WARNING
+  log_level: logging.DEBUG
