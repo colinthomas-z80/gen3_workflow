@@ -4,6 +4,9 @@ Module to perform runtime-specified loading of the parsl config.
 import logging
 import parsl
 from parsl.executors import WorkQueueExecutor, ThreadPoolExecutor
+from parsl.executors.taskvine import TaskVineExecutor
+from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
+from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
 from parsl.providers import LocalProvider, SlurmProvider, PBSProProvider
 from parsl.launchers import SrunLauncher, MpiExecLauncher
 from parsl.channels import LocalChannel
@@ -165,6 +168,30 @@ def workqueue_config(provider=None, monitoring=False, workflow_name=None,
                                  **config_options)
     return parsl.load(config)
 
+def taskvine_config(provider=None, monitoring=False, workflow_name=None,
+                     checkpoint=False,  retries=1, worker_options="",
+                     tv_max_retries=1, port=9000, monitoring_debug=False,
+                     monitoring_hub_port=None, monitoring_interval=60,
+                     **unused_options):
+    """
+    Load a parsl config for a WorkQueueExecutor and the supplied provider.
+    """
+    
+    executors = [TaskVineExecutor(label='taskvine', manager_config=TaskVineManagerConfig(shared_fs=True), factory_config=TaskVineFactoryConfig(worker_options=worker_options), provider=provider),
+                                  ThreadPoolExecutor(max_threads=1, label='submit-node')]
+
+    config_options = set_config_options(retries, monitoring, workflow_name,
+                                        checkpoint, monitoring_debug,
+                                        monitoring_hub_port,
+                                        monitoring_interval)
+
+    config = parsl.config.Config(strategy='simple',
+                                 garbage_collect=False,
+                                 app_cache=True,
+                                 executors=executors,
+                                 **config_options)
+    return parsl.load(config)
+
 
 def thread_pool_config(max_threads=1, monitoring=False, workflow_name=None,
                        checkpoint=False, retries=1,
@@ -224,6 +251,13 @@ def load_parsl_config(bps_config):
         except ValueError:
             config['wq_max_retries'] = None
         return workqueue_config(**config)
+    if config['executor'] == 'TaskVine':
+        try:
+            config['tv_max_retries'] = int(config.get('wq_max_retries', 1))
+        except ValueError:
+            config['tv_max_retries'] = None
+        return taskvine_config(**config)
+
 
     raise RuntimeError("Unknown or unspecified executor in "
                        f"bps config: {config['executor']}")

@@ -13,6 +13,6 @@ payload:
 parsl_config:
   retries: 0
   monitoring: true
-  executor: WorkQueue
+  executor: TaskVine
   provider: Local
   log_level: logging.WARNING
